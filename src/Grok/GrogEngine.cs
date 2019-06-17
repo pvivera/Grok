@@ -1,22 +1,28 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Linq;
+using System.Text.RegularExpressions;
 using System.Collections.Generic;
 
 namespace Grok
 {
     public class GrogEngine
     {
-        private static IDictionary<string, string> Types = new Dictionary<string, string>
+        private static readonly IDictionary<string, string> Types = new Dictionary<string, string>
         {
             {"WORD", @"\w+"},
             {"NUMBER", @"\d+"},
         };
 
-        private static Regex MatchValueRegex = new Regex(@"%{(\w+):(\w+)}");
-        private static MatchEvaluator MatchValueEvaluator = match => string.Format("(?<{0}>{1})", match.Groups[2].Value, Types[match.Groups[1].Value]);
+        private static readonly Regex MatchValueRegex = new Regex(@"%{(\w+)(:(\w+)){0,1}}");
+
+        private static readonly MatchEvaluator MatchValueEvaluator = match => match.Groups[2].Success
+            ? $"(?<{match.Groups[3].Value}>{Types[match.Groups[1].Value]})"
+            : $"({Types[match.Groups[1].Value]})";
 
         public static Dictionary<string, string> ExtractData(string pattern, string text)
         {
-            var regex = new Regex(MatchValueRegex.Replace(pattern, MatchValueEvaluator));
+            var replacedPattern = MatchValueRegex.Replace(pattern, MatchValueEvaluator);
+
+            var regex = new Regex(replacedPattern);
 
             var matchCollection = regex.Match(text);
 
@@ -26,7 +32,7 @@ namespace Grok
 
             var groups = matchCollection.Groups;
 
-            foreach (string groupName in regex.GetGroupNames())
+            foreach (var groupName in regex.GetGroupNames())
             {
                 result.Add(groupName, groups[groupName].Value);
             }
