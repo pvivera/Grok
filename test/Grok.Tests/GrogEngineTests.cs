@@ -58,5 +58,19 @@ namespace Grok.Tests
 
             action.Should().Throw<GrokException>().WithMessage("*TEST*");
         }
+
+        [Theory]
+        [InlineData("%{NUMBER:number:int}", "123", 123)]
+        [InlineData("%{NUMBER:number:integer}", "123", 123)]
+        [InlineData("%{NUMBER:number:long}", "123456789", 123456789)]
+        [InlineData("%{NUMBER:number:decimal}", "12.34", 12.34)]
+        [InlineData("%{NUMBER:number:double}", "12.34", 12.34)]
+        [InlineData("%{WORD:number:boolean}", "true", true)]
+        public void ExtractData_ShouldParseAndConvertData(string pattern, string text, object expected)
+        {
+            var result = _sut.ExtractData(pattern, text);
+
+            result["number"].Should().Be(expected);
+        }
     }
 }
