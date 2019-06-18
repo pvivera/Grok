@@ -72,5 +72,19 @@ namespace Grok.Tests
 
             result["number"].Should().Be(expected);
         }
+        [Theory]
+        [InlineData("%{WORD:number:int}", "abc")]
+        [InlineData("%{WORD:number:integer}", "abc")]
+        [InlineData("%{WORD:number:long}", "abc")]
+        [InlineData("%{WORD:number:decimal}", "abc")]
+        [InlineData("%{WORD:number:double}", "abc")]
+        [InlineData("%{WORD:number:boolean}", "abc")]
+        public void ExtractData_ShouldThrowGrokException_WhenConvertionIsInvalid(string pattern, string text)
+        {
+            Action action = () => _sut.ExtractData(pattern, text);
+
+            action.Should().Throw<GrokException>().WithMessage("*The parameter number cannot be convert to*");
+        }
+
     }
 }

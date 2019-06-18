@@ -116,22 +116,42 @@ namespace Grok
             {
                 case "int":
                 case "integer":
-                    return Convert.ToInt32(value);
+                    if (Int32.TryParse(value, out var resultInt))
+                        return resultInt;
+                    ThrowConversionException(groupName, convert, value);
+                    break;
 
                 case "long":
-                    return Convert.ToInt64(value);
+                    if (Int64.TryParse(value, out var resultInt64))
+                        return resultInt64;
+                    ThrowConversionException(groupName, convert, value);
+                    break;
 
                 case "decimal":
-                    return Convert.ToDecimal(value);
+                    if (Decimal.TryParse(value, out var resultDecimal))
+                        return resultDecimal;
+                    ThrowConversionException(groupName, convert, value);
+                    break;
 
                 case "double":
-                    return Convert.ToDouble(value);
+                    if (Double.TryParse(value, out var resultDouble))
+                        return resultDouble;
+                    ThrowConversionException(groupName, convert, value);
+                    break;
 
                 case "boolean":
-                    return Convert.ToBoolean(value);
+                    if (Boolean.TryParse(value, out var resultBoolean))
+                        return resultBoolean;
+                    ThrowConversionException(groupName, convert, value);
+                    break;
             }
 
             return null;
+        }
+
+        private void ThrowConversionException(string parameter, string convert, string value)
+        {
+            throw new GrokException($"The parameter {parameter} cannot be convert to {convert} ({value})");
         }
     }
 }
