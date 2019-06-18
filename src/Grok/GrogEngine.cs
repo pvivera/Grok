@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Linq;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Grok
 {
@@ -15,24 +15,37 @@ namespace Grok
 
         private static readonly Regex MatchValueRegex = new Regex(@"%{(\w+)((:(\w+)){0,1}|(:(\w+):(int|integer|long|double|boolean)){0,1})}");
 
-        private readonly IDictionary<string, string> _parameterConvert = new Dictionary<string, string>();
+        private readonly IDictionary<string, string> _parameterConvert;
+
+        private SemaphoreSlim _semaphore;
+
+        public GrogEngine()
+        {
+            _parameterConvert = new Dictionary<string, string>();
+            _semaphore = new SemaphoreSlim(1, 1);
+        }
 
         private string ReplaceMatch(Match match)
         {
             var replacementPattern = string.Empty;
 
+            var templateName = match.Groups[1].Value;
+
+            if (!Types.ContainsKey(templateName))
+                throw new GrokException($"Template {templateName} is not defined.");
+
             switch (match.Groups[0].Value.Split(':').Length - 1)
             {
                 case 0:
-                    replacementPattern = $"({Types[match.Groups[1].Value]})";
+                    replacementPattern = $"({Types[templateName]})";
                     break;
 
                 case 1:
-                    replacementPattern = $"(?<{match.Groups[4].Value}>{Types[match.Groups[1].Value]})";
+                    replacementPattern = $"(?<{match.Groups[4].Value}>{Types[templateName]})";
                     break;
 
                 case 2:
-                    replacementPattern = $"(?<{match.Groups[6].Value}>{Types[match.Groups[1].Value]})";
+                    replacementPattern = $"(?<{match.Groups[6].Value}>{Types[templateName]})";
                     _parameterConvert.Add(match.Groups[6].Value, match.Groups[7].Value);
                     break;
             }
@@ -43,6 +56,8 @@ namespace Grok
         public Dictionary<string, object> ExtractData(string pattern, string text)
         {
             var matchValueEvaluator = new MatchEvaluator(ReplaceMatch);
+
+            _semaphore.Wait();
 
             _parameterConvert.Clear();
 
@@ -65,6 +80,8 @@ namespace Grok
                         ? groups[groupName].Value
                         : ConvertExtractedData(groupName, groups[groupName].Value));
             }
+
+            _semaphore.Release();
 
             return result;
         }

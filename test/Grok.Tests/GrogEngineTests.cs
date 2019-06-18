@@ -1,3 +1,4 @@
+using System;
 using Xunit;
 using FluentAssertions;
 
@@ -48,6 +49,14 @@ namespace Grok.Tests
             data["bytes"].Should().Be(123);
             data.Should().ContainKey("duration");
             data["duration"].Should().Be(456);
+        }
+
+        [Fact]
+        public void ExtractData_ShouldThrowGrokException_WhenTemplateIsNotDefined()
+        {
+            Action action = () => _sut.ExtractData("%{TEST}", "text");
+
+            action.Should().Throw<GrokException>().WithMessage("*TEST*");
         }
     }
 }
