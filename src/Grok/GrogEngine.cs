@@ -75,7 +75,7 @@ namespace Grok
             return replacementPattern;
         }
 
-        public Dictionary<string, object> ExtractData(string pattern, string text)
+        public Dictionary<string, object> ExtractData(string[] patterns, string text)
         {
             var matchValueEvaluator = new MatchEvaluator(ReplaceMatch);
 
@@ -83,6 +83,34 @@ namespace Grok
 
             _parameterConvert.Clear();
 
+            var results = new Dictionary<string, object>();
+
+            foreach(var pattern in patterns)
+            {
+                var result = ProcessPattern(matchValueEvaluator, pattern, text);
+
+                if (!result.Any()) continue;
+
+                foreach(var k in result.Keys)
+                {
+                    if (results.Keys.Contains(k))
+                    {
+                        results.Add(k, result[k]);
+                    }
+                    else
+                    {
+                        results[k] = result[k];
+                    }
+                }
+            }
+
+            _semaphore.Release();
+
+            return results;
+        }
+
+        private Dictionary<string, object> ProcessPattern(MatchEvaluator matchValueEvaluator, string pattern, string text)
+        {
             var replacedPattern = MatchValueRegex.Replace(pattern, matchValueEvaluator);
 
             var regex = new Regex(replacedPattern);
@@ -91,7 +119,7 @@ namespace Grok
 
             var result = new Dictionary<string, object>();
 
-            if(!matchCollection.Success) return result;
+            if (!matchCollection.Success) return result;
 
             var groups = matchCollection.Groups;
 
@@ -102,8 +130,6 @@ namespace Grok
                         ? groups[groupName].Value
                         : ConvertExtractedData(groupName, groups[groupName].Value));
             }
-
-            _semaphore.Release();
 
             return result;
         }

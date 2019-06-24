@@ -16,7 +16,7 @@ namespace Grok.Tests
         [Fact]
         public void ExtractData_ShouldExtractTheCorrectData()
         {
-            var data = _sut.ExtractData("%{WORD:method} %{NUMBER:bytes} %{NUMBER:duration}", "hello 123 456");
+            var data = _sut.ExtractData(new[] { "%{WORD:method} %{NUMBER:bytes} %{NUMBER:duration}" }, "hello 123 456");
 
             data.Should().ContainKey("method");
             data["method"].Should().Be("hello");
@@ -29,7 +29,7 @@ namespace Grok.Tests
         [Fact]
         public void ExtractData_ShouldIgnoreCapture_WhenThereIsNoParameterName()
         {
-            var data = _sut.ExtractData("%{WORD} %{NUMBER:bytes} %{NUMBER:duration}", "hello 123 456");
+            var data = _sut.ExtractData(new[] { "%{WORD} %{NUMBER:bytes} %{NUMBER:duration}" }, "hello 123 456");
 
             data.Should().NotContainKey("method");
             data.Should().ContainKey("bytes");
@@ -41,7 +41,7 @@ namespace Grok.Tests
         [Fact]
         public void ExtractData_ShouldExtractTheCorrectDataAndConvert()
         {
-            var data = _sut.ExtractData("%{WORD:method} %{NUMBER:bytes:int} %{NUMBER:duration:integer}", "hello 123 456");
+            var data = _sut.ExtractData(new[] { "%{WORD:method} %{NUMBER:bytes:int} %{NUMBER:duration:integer}" }, "hello 123 456");
 
             data.Should().ContainKey("method");
             data["method"].Should().Be("hello");
@@ -54,34 +54,34 @@ namespace Grok.Tests
         [Fact]
         public void ExtractData_ShouldThrowGrokException_WhenTemplateIsNotDefined()
         {
-            Action action = () => _sut.ExtractData("%{TEST}", "text");
+            Action action = () => _sut.ExtractData(new[] { "%{TEST}" }, "text");
 
             action.Should().Throw<GrokException>().WithMessage("*TEST*");
         }
 
         [Theory]
-        [InlineData("%{NUMBER:number:int}", "123", 123)]
-        [InlineData("%{NUMBER:number:integer}", "123", 123)]
-        [InlineData("%{NUMBER:number:long}", "123456789", 123456789)]
-        [InlineData("%{NUMBER:number:decimal}", "12.34", 12.34)]
-        [InlineData("%{NUMBER:number:double}", "12.34", 12.34)]
-        [InlineData("%{WORD:number:boolean}", "true", true)]
-        public void ExtractData_ShouldParseAndConvertData(string pattern, string text, object expected)
+        [InlineData("123", 123, "%{NUMBER:number:int}")]
+        [InlineData("123", 123, "%{NUMBER:number:integer}")]
+        [InlineData("123456789", 123456789, "%{NUMBER:number:long}")]
+        [InlineData("12.34", 12.34, "%{NUMBER:number:decimal}")]
+        [InlineData("12.34", 12.34, "%{NUMBER:number:double}")]
+        [InlineData("true", true, "%{WORD:number:boolean}")]
+        public void ExtractData_ShouldParseAndConvertData(string text, object expected, params string[] patterns)
         {
-            var result = _sut.ExtractData(pattern, text);
+            var result = _sut.ExtractData(patterns, text);
 
             result["number"].Should().Be(expected);
         }
         [Theory]
-        [InlineData("%{WORD:number:int}", "abc")]
-        [InlineData("%{WORD:number:integer}", "abc")]
-        [InlineData("%{WORD:number:long}", "abc")]
-        [InlineData("%{WORD:number:decimal}", "abc")]
-        [InlineData("%{WORD:number:double}", "abc")]
-        [InlineData("%{WORD:number:boolean}", "abc")]
-        public void ExtractData_ShouldThrowGrokException_WhenConvertionIsInvalid(string pattern, string text)
+        [InlineData("abc", "%{WORD:number:int}")]
+        [InlineData("abc", "%{WORD:number:integer}")]
+        [InlineData("abc", "%{WORD:number:long}")]
+        [InlineData("abc", "%{WORD:number:decimal}")]
+        [InlineData("abc", "%{WORD:number:double}")]
+        [InlineData("abc", "%{WORD:number:boolean}")]
+        public void ExtractData_ShouldThrowGrokException_WhenConvertionIsInvalid(string text, params string[] patterns)
         {
-            Action action = () => _sut.ExtractData(pattern, text);
+            Action action = () => _sut.ExtractData(patterns, text);
 
             action.Should().Throw<GrokException>().WithMessage("*The parameter number cannot be convert to*");
         }
