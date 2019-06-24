@@ -72,6 +72,7 @@ namespace Grok.Tests
 
             result["number"].Should().Be(expected);
         }
+
         [Theory]
         [InlineData("abc", "%{WORD:number:int}")]
         [InlineData("abc", "%{WORD:number:integer}")]
@@ -86,5 +87,16 @@ namespace Grok.Tests
             action.Should().Throw<GrokException>().WithMessage("*The parameter number cannot be convert to*");
         }
 
+        [Theory]
+        [InlineData("abc def 123", "%{WORD:word} %{WORD:word2}", "%{NUMBER:number:int}")]
+        public void ExtractData_ShouldExtract_UsingMultiplePatterns(string text, params string[] patterns)
+        {
+            var result = _sut.ExtractData(patterns, text);
+
+            result.Keys.Should().Contain("word");
+            result["word"].Should().Be("abc");
+            result.Keys.Should().Contain("number");
+            result["number"].Should().Be(123);
+        }
     }
 }

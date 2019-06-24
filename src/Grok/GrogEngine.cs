@@ -93,7 +93,7 @@ namespace Grok
 
                 foreach(var k in result.Keys)
                 {
-                    if (results.Keys.Contains(k))
+                    if (!results.Keys.Contains(k))
                     {
                         results.Add(k, result[k]);
                     }
@@ -123,7 +123,7 @@ namespace Grok
 
             var groups = matchCollection.Groups;
 
-            foreach (var groupName in regex.GetGroupNames())
+            foreach (var groupName in regex.GetGroupNames().Where(g => g != "0"))
             {
                 result.Add(groupName,
                     !_parameterConvert.ContainsKey(groupName)
