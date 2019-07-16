@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using Newtonsoft.Json.Linq;
 
 namespace Grok
 {
@@ -75,7 +76,7 @@ namespace Grok
             return replacementPattern;
         }
 
-        public Dictionary<string, object> ExtractData(string[] patterns, string text)
+        private Dictionary<string, object> ExtractData(string[] patterns, string text, bool breakOnMatch)
         {
             var matchValueEvaluator = new MatchEvaluator(ReplaceMatch);
 
@@ -102,6 +103,8 @@ namespace Grok
                         results[k] = result[k];
                     }
                 }
+
+                if (breakOnMatch) break;
             }
 
             _semaphore.Release();
@@ -123,7 +126,8 @@ namespace Grok
 
             var groups = matchCollection.Groups;
 
-            foreach (var groupName in regex.GetGroupNames().Where(g => g != "0"))
+            foreach (var groupName in regex.GetGroupNames()
+                .Where(g => !string.Equals(g, "0", StringComparison.InvariantCultureIgnoreCase)))
             {
                 result.Add(groupName,
                     !_parameterConvert.ContainsKey(groupName)
@@ -178,6 +182,39 @@ namespace Grok
         private void ThrowConversionException(string parameter, string convert, string value)
         {
             throw new GrokException($"The parameter {parameter} cannot be convert to {convert} ({value})");
+        }
+
+        public GrokResult ExtractData(GrokConfiguration configuration, JObject inputData)
+        {
+            if(configuration == null)
+                throw new GrokException(nameof(configuration));
+
+            if(inputData == null)
+                return new GrokResult();
+
+            var outputData = (JObject) inputData.DeepClone();
+            var dataExtracted = false;
+
+            var properties = inputData.Properties().ToList();
+
+            foreach (var filter in configuration.Filters)
+            {
+                if(properties.All(p => p.Name != filter.Property)) continue;
+
+                var extractedData = ExtractData(filter.Patterns, inputData[filter.Property].Value<string>(),
+                    filter.BreakOnMatch);
+
+                if (extractedData.Count == 0) continue;
+
+                dataExtracted = true;
+
+                foreach (var data in extractedData)
+                {
+                    outputData.Add(data.Key, JToken.FromObject(data.Value));
+                }
+            }
+
+            return new GrokResult {DataExtracted = dataExtracted, Data = outputData};
         }
     }
 }
